@@ -1,0 +1,22 @@
+<div class="topics">
+    <div class="topics__header">
+      <h2>Browse Cities</h2>
+    </div>
+    <ul class="topics__list">
+      <li>
+        <a href="{% url 'home' %}" class="active">All <span>{{citys.count}}</span></a>
+      </li>
+      
+        {% for city in citys %}
+        <li>
+            <a href = "{% url 'home' %}?q={{city.name}}"> {{city.name}} <span> {{city.room_set.all.count}} </span> </a>
+        </li>
+        {% endfor%} 
+      
+    </ul>
+    
+  </div>
+
+
+
+

@@ -3,15 +3,23 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from .models import Room, City, Message, User
 from .forms import RoomForm
+from django.contrib.auth.forms import UserCreationForm
+
 
 def loginPage(request):
+    page='login'
+    
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    
     if request.method == 'POST':
-        username = request.POST.get('username')
+        username = request.POST.get('username').lower()
         password = request.POST.get('password')
         
         try:
@@ -28,8 +36,9 @@ def loginPage(request):
             messages.error(request, 'Username or password does not match')
             
          
-    context = {}
+    context = {'page':page}
     return render(request, 'base/login_register.html', context)
+
 
 
 
@@ -37,6 +46,26 @@ def logoutPage(request):
     logout(request)
     return redirect('home')
         
+
+
+def registerUser(request):
+    
+    form = UserCreationForm()
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.username = user.username.lower()
+            user.save()
+            login(request, user)
+            return redirect('home')
+        else:
+            messages.error(request, 'An error occured')
+    
+    
+    return render(request, 'base/login_register.html', {'form':form})
+
+
 
 def home(request):
     q = request.GET.get('q') if request.GET.get('q') != None else ''
@@ -47,50 +76,111 @@ def home(request):
                                 )
     citys = City.objects.all()
     room_count = rooms.count()
-    context = {'rooms':rooms, 'citys': citys, 'room_count' : room_count}
+    room_messages = Message.objects.filter(Q(room__city__name__icontains=q))
+    
+    context = {'rooms':rooms, 'citys': citys, 'room_count' : room_count, 'room_messages':room_messages}
     return render(request, 'base/home.html',  context)
 
 
 
 def room(request, pk):
     room = Room.objects.get(id=pk)
-    context = {'room': room}
+    room_messages = room.message_set.all().order_by('-created')
+    participants = room.participants.all()
+    
+    if request.method == 'POST':
+        message = Message.objects.create(
+            user=request.user,
+            room=room,
+            body=request.POST.get('body')
+        )
+        room.participants.add(request.user)
+        return redirect('room', pk=room.id)
+    
+    context = {'room': room, 'room_messages':room_messages, 'participants':participants}
     return render(request, 'base/room.html', context)
 
 
 
+def userProfile(request, pk):
+    user = User.objects.get(id=pk)
+    rooms = user.room_set.all()
+    room_messages = user.message_set.all()
+    citys = City.objects.all()
+    context = {'user':user, 'rooms':rooms, 'citys':citys, 'room_messages':room_messages}
+    return render(request, 'base/profile.html', context)
+
+
+@login_required(login_url='login')
 def createRoom(request):
     form = RoomForm()
-    if request.method == 'POST':
-        form = RoomForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('home')
+    citys = City.objects.all()
     
-    context = {'form' : form}
+    if request.method == 'POST':
+        city_name = request.POST.get('city')
+        city, created = City.objects.get_or_create(name=city_name)
+
+        Room.objects.create(
+            host=request.user,
+            city=city,
+            name=request.POST.get('name'), 
+            description=request.POST.get('description')
+        )
+    
+        return redirect('home')
+    
+    context = {'form' : form, 'citys':citys}
     return render(request, 'base/room_form.html', context)
 
-
+@login_required(login_url='login')
 def updateRoom(request, pk):
     room = Room.objects.get(id=pk)
     form = RoomForm(instance=room)
+    citys = City.objects.all()
+    
+    if request.user != room.host:
+        return HttpResponse("You're not allowed here")
+    
     
     if request.method == 'POST':
-        form = RoomForm(request.POST, instance=room)
-        if form.is_valid():
-            form.save()
-            return redirect('home')
+        city_name = request.POST.get('city')
+        city, created = City.objects.get_or_create(name=city_name)
+        room.name = request.POST.get('name')
+        room.city = city
+        room.description = request.POST.get('description')
+        room.save()
+        return redirect('home')
     
     
-    context = {'form': form}
+    context = {'form': form, 'citys':citys, 'room':room}
     
     return render(request, 'base/room_form.html', context)
 
-
+@login_required(login_url='login')
 def deleteRoom(request, pk):
     room = Room.objects.get(id=pk)
+    
+    if request.user != room.host:
+        return HttpResponse("You're not allowed here")
+    
+    
     if request.method=='POST':
         room.delete()
         return redirect('home')
     return render(request, 'base/delete.html', {'obj': room})
+
+
+
+@login_required(login_url='login') 
+def deleteMessage(request, pk):
+    message = Message.objects.get(id=pk)
+    
+    if request.user != message.user:
+        return HttpResponse("You're not allowed here")
+    
+    
+    if request.method=='POST':
+        message.delete()
+        return redirect('home')
+    return render(request, 'base/delete.html', {'obj': message})
 
