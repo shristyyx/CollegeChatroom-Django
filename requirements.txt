@@ -2,7 +2,7 @@ asgiref==3.7.2
 certifi==2024.2.2
 charset-normalizer==3.3.2
 distlib==0.3.8
-Django==5.0.2
+Django==4.0.2
 filelock==3.13.1
 idna==3.6
 pipenv==2023.12.1
