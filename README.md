@@ -1,6 +1,16 @@
 # College Buddy- Chatroom Application
 
-**Find people from different colleges to ask questions before taking admissions!**
+**Chat room for college selection discussions: A full stack Django website where users can create chat rooms to discuss about various colleges.**
+
+- Built a comprehensive web application enabling users to engage in real-time chat discussions across various college rooms.
+- 
+- Developed using Django framework, incorporating essential features like user authentication, CRUD operations, search functionality, etc.
+- 
+- Implemented user-friendly interfaces with dynamic templates, flash messages, and theme customization, enhancing the overall user experience.
+- 
+- Explored advanced functionalities such as activity feed, user profiles, and integration of static files for seamless frontend rendering.
+- 
+- Leveraged Git for version control and managing project effectively.
 
 
 ![image](https://github.com/shristyyx/studybud/assets/94732127/db25700e-0ad7-4ac5-b5cc-deabae7670b2)
